@@ -46,4 +46,6 @@ return [
     'webhook_secret' => env('PAYMENT_WEBHOOK_SECRET'),
 ],
 
+'user_jwt_secret' => env('JWT_SECRET'),
+
 ];

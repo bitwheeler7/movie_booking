@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'user_jwt_secret' => env('JWT_SECRET'),
+
+    'booking' => [
+        'catalog_service_url' => env('CATALOG_SERVICE_URL', 'http://127.0.0.1:8002/api'),
+        'payment_service_url' => env('PAYMENT_SERVICE_URL', 'http://127.0.0.1:8004/api'),
+    ],
+
+    'payment' => [
+        'webhook_secret' => env('PAYMENT_WEBHOOK_SECRET'),
+    ],
+
 ];

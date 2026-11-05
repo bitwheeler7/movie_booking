@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'user_jwt_secret' => env('JWT_SECRET'),
+
+    'notification' => [
+        'dead_letter_topic' => env('KAFKA_NOTIFICATION_DLQ_TOPIC', 'notifications.dead-letter'),
+    ],
+
 ];

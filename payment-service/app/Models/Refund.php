@@ -16,6 +16,7 @@ class Refund extends Model
         'status',
         'refunded_at',
         'gateway_response',
+        'idempotency_key',
     ];
 
     protected function casts(): array

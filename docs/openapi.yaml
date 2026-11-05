@@ -1,0 +1,1094 @@
+openapi: 3.0.3
+info:
+  title: Movie Ticket Booking Microservices API
+  version: 1.0.0
+  description: >
+    Combined API reference for routes currently implemented by this workspace.
+    Service-to-service calls and HMAC-protected callbacks are identified in the
+    relevant operations. Catalog writes currently have no authentication
+    middleware; do not expose them publicly without an administrative policy.
+servers:
+  - url: http://127.0.0.1:8001/api
+    description: User Service (local development)
+tags:
+  - name: Authentication
+  - name: Movies
+  - name: Cities
+  - name: Theatres
+  - name: Screens
+  - name: Seats
+  - name: Shows
+  - name: Booking
+  - name: Tickets
+  - name: Payments
+  - name: Notifications
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, password_confirmation]
+              properties:
+                name: {type: string, maxLength: 255}
+                email: {type: string, format: email}
+                password: {type: string, minLength: 8}
+                password_confirmation: {type: string}
+      responses:
+        '201':
+          description: User registered and bearer JWT issued.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AuthToken'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string}
+      responses:
+        '200':
+          description: Authenticated.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AuthToken'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /auth/profile:
+    get:
+      tags: [Authentication]
+      security: [{BearerAuth: []}]
+      summary: Get the authenticated user's profile
+      responses:
+        '200': {description: Profile returned.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      security: [{BearerAuth: []}]
+      summary: Invalidate the current JWT
+      responses:
+        '200': {description: Logged out.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+
+  /movies:
+    servers:
+      - url: http://127.0.0.1:8002/api
+        description: Catalog Service (local development)
+    get:
+      tags: [Movies]
+      summary: List active movies
+      responses:
+        '200':
+          description: Paginated active movies.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  data:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items: {$ref: '#/components/schemas/Movie'}
+    post:
+      tags: [Movies]
+      summary: Create a movie
+      description: This catalog mutation route currently has no authentication middleware.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - {$ref: '#/components/schemas/MovieCreateInput'}
+              example:
+                title: Example Movie
+                description: A movie description
+                language: English
+                genre: Drama
+                duration_minutes: 120
+                release_date: '2026-11-05'
+                certificate: UA
+                poster_url: 'https://example.test/poster.jpg'
+      responses:
+        '201':
+          description: Movie created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean, example: true}
+                  message: {type: string}
+                  data: {$ref: '#/components/schemas/Movie'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /movies/{id}:
+    servers: [{url: http://127.0.0.1:8002/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Movies]
+      summary: Get an active movie
+      responses:
+        '200':
+          description: Movie returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  data: {$ref: '#/components/schemas/Movie'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Movies]
+      summary: Update a movie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - {$ref: '#/components/schemas/MovieUpdateInput'}
+              example:
+                title: Updated Movie Title
+                is_active: true
+      responses:
+        '200':
+          description: Movie updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  message: {type: string}
+                  data: {$ref: '#/components/schemas/Movie'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    patch:
+      tags: [Movies]
+      summary: Partially update a movie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - {$ref: '#/components/schemas/MovieUpdateInput'}
+              example:
+                title: Updated Movie Title
+      responses:
+        '200':
+          description: Movie updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  message: {type: string}
+                  data: {$ref: '#/components/schemas/Movie'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [Movies]
+      summary: Deactivate a movie
+      responses:
+        '200': {description: Movie deactivated.}
+  /cities:
+    servers: [{url: http://127.0.0.1:8002/api}]
+    get:
+      tags: [Cities]
+      summary: List active cities
+      responses:
+        '200': {description: Paginated cities.}
+    post:
+      tags: [Cities]
+      summary: Create a city
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: {type: string, maxLength: 100}
+                state: {type: string, nullable: true, maxLength: 100}
+                country: {type: string, nullable: true, maxLength: 100}
+              example:
+                name: Example City
+                state: Example State
+                country: India
+      responses:
+        '201':
+          description: City created; the response body is the city record.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/City'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /cities/{id}:
+    servers: [{url: http://127.0.0.1:8002/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Cities]
+      summary: Get a city with theatres
+      responses:
+        '200':
+          description: City returned with theatres.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/City'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Cities]
+      summary: Update a city
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - {$ref: '#/components/schemas/CityUpdateInput'}
+              example:
+                name: Example City
+                state: Example State
+                country: India
+                is_active: true
+      responses:
+        '200':
+          description: City updated; the response body is the city record.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/City'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    patch:
+      tags: [Cities]
+      summary: Partially update a city
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - {$ref: '#/components/schemas/CityUpdateInput'}
+              example:
+                is_active: false
+      responses:
+        '200':
+          description: City updated; the response body is the city record.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/City'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [Cities]
+      summary: Deactivate a city
+      responses:
+        '200': {description: City deactivated.}
+
+  /theatres:
+    servers: [{url: http://127.0.0.1:8002/api}]
+    get:
+      tags: [Theatres]
+      summary: List active theatres
+      parameters:
+        - in: query
+          name: city_id
+          schema: {type: integer}
+      responses:
+        '200': {description: Paginated theatres with city.}
+    post:
+      tags: [Theatres]
+      summary: Create a theatre
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [city_id, name]
+              properties:
+                city_id: {type: integer}
+                name: {type: string, maxLength: 255}
+                address: {type: string, nullable: true}
+                pincode: {type: string, nullable: true, maxLength: 10}
+      responses:
+        '201': {description: Theatre created.}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /theatres/{id}:
+    servers: [{url: http://127.0.0.1:8002/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Theatres]
+      summary: Get a theatre with screens
+      responses:
+        '200': {description: Theatre returned.}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Theatres]
+      summary: Update a theatre
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                city_id: {type: integer}
+                name: {type: string, maxLength: 255}
+                address: {type: string, nullable: true}
+                pincode: {type: string, nullable: true, maxLength: 10}
+                is_active: {type: boolean}
+      responses:
+        '200': {description: Theatre updated.}
+    patch:
+      tags: [Theatres]
+      summary: Partially update a theatre
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                city_id: {type: integer}
+                name: {type: string}
+                address: {type: string, nullable: true}
+                pincode: {type: string, nullable: true}
+                is_active: {type: boolean}
+      responses:
+        '200': {description: Theatre updated.}
+    delete:
+      tags: [Theatres]
+      summary: Deactivate a theatre
+      responses:
+        '200': {description: Theatre deactivated.}
+  /screens:
+    servers: [{url: http://127.0.0.1:8002/api}]
+    get:
+      tags: [Screens]
+      summary: List active screens
+      parameters:
+        - in: query
+          name: theatre_id
+          schema: {type: integer}
+      responses:
+        '200': {description: Paginated screens.}
+    post:
+      tags: [Screens]
+      summary: Create a screen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [theatre_id, name]
+              properties:
+                theatre_id: {type: integer}
+                name: {type: string, maxLength: 100}
+      responses:
+        '201': {description: Screen created.}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /screens/{id}:
+    servers: [{url: http://127.0.0.1:8002/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Screens]
+      summary: Get a screen with theatre and seats
+      responses:
+        '200': {description: Screen returned.}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Screens]
+      summary: Update a screen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string, maxLength: 100}
+                is_active: {type: boolean}
+      responses:
+        '200': {description: Screen updated.}
+    patch:
+      tags: [Screens]
+      summary: Partially update a screen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string}
+                is_active: {type: boolean}
+      responses:
+        '200': {description: Screen updated.}
+    delete:
+      tags: [Screens]
+      summary: Deactivate a screen
+      responses:
+        '200': {description: Screen deactivated.}
+  /seats:
+    servers: [{url: http://127.0.0.1:8002/api}]
+    get:
+      tags: [Seats]
+      summary: List active seats for a screen
+      parameters:
+        - in: query
+          name: screen_id
+          required: true
+          schema: {type: integer}
+      responses:
+        '200': {description: Paginated seats.}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    post:
+      tags: [Seats]
+      summary: Create a seat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [screen_id, seat_number, seat_type, base_price]
+              properties:
+                screen_id: {type: integer}
+                seat_number: {type: string, maxLength: 20}
+                seat_type: {type: string, enum: [REGULAR, PREMIUM, RECLINER]}
+                row_label: {type: string, nullable: true, maxLength: 10}
+                base_price: {type: number, minimum: 0}
+      responses:
+        '201': {description: Seat created.}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /seats/{id}:
+    servers: [{url: http://127.0.0.1:8002/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Seats]
+      summary: Get a seat
+      responses:
+        '200': {description: Seat returned.}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Seats]
+      summary: Update a seat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                seat_type: {type: string, enum: [REGULAR, PREMIUM, RECLINER]}
+                row_label: {type: string, nullable: true}
+                base_price: {type: number, minimum: 0}
+                is_active: {type: boolean}
+      responses:
+        '200': {description: Seat updated.}
+    patch:
+      tags: [Seats]
+      summary: Partially update a seat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                seat_type: {type: string, enum: [REGULAR, PREMIUM, RECLINER]}
+                row_label: {type: string, nullable: true}
+                base_price: {type: number}
+                is_active: {type: boolean}
+      responses:
+        '200': {description: Seat updated.}
+    delete:
+      tags: [Seats]
+      summary: Deactivate a seat
+      responses:
+        '200': {description: Seat deactivated.}
+  /shows:
+    servers: [{url: http://127.0.0.1:8002/api}]
+    get:
+      tags: [Shows]
+      summary: List future scheduled shows
+      parameters:
+        - in: query
+          name: movie_id
+          schema: {type: integer}
+        - in: query
+          name: screen_id
+          schema: {type: integer}
+        - in: query
+          name: date
+          schema: {type: string, format: date}
+      responses:
+        '200': {description: "Paginated shows with movie, screen, theatre, and city."}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    post:
+      tags: [Shows]
+      summary: Schedule a show
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [movie_id, screen_id, start_time, end_time, ticket_price]
+              properties:
+                movie_id: {type: integer}
+                screen_id: {type: integer}
+                start_time: {type: string, format: date-time}
+                end_time: {type: string, format: date-time}
+                ticket_price: {type: number, minimum: 0}
+      responses:
+        '201': {description: Show scheduled.}
+        '422': {description: Invalid input or overlapping show.}
+  /shows/{id}:
+    servers: [{url: http://127.0.0.1:8002/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Shows]
+      summary: Get a show
+      responses:
+        '200': {description: "Show with movie, screen, theatre, and city."}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Shows]
+      summary: Update show times, price, or status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_time: {type: string, format: date-time}
+                end_time: {type: string, format: date-time}
+                ticket_price: {type: number, minimum: 0}
+                status: {type: string, enum: [SCHEDULED, CANCELLED, COMPLETED]}
+      responses:
+        '200': {description: Show updated.}
+        '422': {description: Invalid time range or screen overlap.}
+    patch:
+      tags: [Shows]
+      summary: Partially update a show
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_time: {type: string, format: date-time}
+                end_time: {type: string, format: date-time}
+                ticket_price: {type: number}
+                status: {type: string, enum: [SCHEDULED, CANCELLED, COMPLETED]}
+      responses:
+        '200': {description: Show updated.}
+    delete:
+      tags: [Shows]
+      summary: Cancel a show
+      responses:
+        '200': {description: Show cancelled.}
+
+  /shows/{showId}/inventory:
+    servers: [{url: http://127.0.0.1:8003/api}]
+    post:
+      tags: [Booking]
+      summary: Initialize booking-service seat inventory for a show
+      parameters:
+        - in: path
+          name: showId
+          required: true
+          schema: {type: integer}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [seats]
+              properties:
+                seats:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [seat_id, seat_number, ticket_price]
+                    properties:
+                      seat_id: {type: integer, minimum: 1}
+                      seat_number: {type: string, maxLength: 20}
+                      ticket_price: {type: number, minimum: 0}
+      responses:
+        '201': {description: Inventory initialized.}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /shows/{showId}/availability:
+    servers: [{url: http://127.0.0.1:8003/api}]
+    get:
+      tags: [Booking]
+      summary: List seats and effective availability
+      parameters:
+        - in: path
+          name: showId
+          required: true
+          schema: {type: integer}
+      responses:
+        '200': {description: Seat availability returned.}
+  /bookings/lock:
+    servers: [{url: http://127.0.0.1:8003/api}]
+    post:
+      tags: [Booking]
+      security: [{BearerAuth: []}]
+      summary: Lock up to ten seats for eight minutes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, show_id, seat_ids]
+              properties:
+                user_id: {type: integer, minimum: 1}
+                show_id: {type: integer, minimum: 1}
+                seat_ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  uniqueItems: true
+                  items: {type: integer, minimum: 1}
+      responses:
+        '201': {description: Booking and temporary seat locks created.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /bookings/{id}:
+    servers: [{url: http://127.0.0.1:8003/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Booking]
+      security: [{BearerAuth: []}]
+      summary: Get an owned booking, seats, and ticket if issued
+      responses:
+        '200': {description: Booking returned.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /bookings/{id}/ticket:
+    servers: [{url: http://127.0.0.1:8003/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Tickets]
+      security: [{BearerAuth: []}]
+      summary: Get the authenticated owner's issued ticket
+      responses:
+        '200': {description: Ticket returned.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /bookings/{id}/release:
+    servers: [{url: http://127.0.0.1:8003/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      tags: [Booking]
+      security: [{BearerAuth: []}]
+      summary: Release a pending booking's seat locks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id: {type: integer}
+      responses:
+        '200': {description: Booking locks released.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {description: Booking is not pending.}
+  /bookings/{id}/cancel:
+    servers: [{url: http://127.0.0.1:8003/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      tags: [Booking]
+      security: [{BearerAuth: []}]
+      summary: Cancel an owned booking before show start and request a refund
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: {type: string, maxLength: 255}
+      responses:
+        '200': {description: Booking cancelled; remaining refund requested.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {description: Booking is not cancellable or show has started.}
+        '502': {description: Catalog or Payment Service is unavailable; retry the request.}
+  /bookings/{id}/confirm-payment:
+    servers: [{url: http://127.0.0.1:8003/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      tags: [Booking]
+      security: [{PaymentSignature: []}]
+      summary: Confirm a booking from a signed Payment Service callback
+      description: The raw request body must be HMAC-SHA256 signed in X-Payment-Signature using the shared payment webhook secret.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [booking_id, payment_id, payment_reference, user_id, amount, status]
+              properties:
+                booking_id: {type: integer}
+                payment_id: {type: integer}
+                payment_reference: {type: string, maxLength: 50}
+                user_id: {type: integer}
+                amount: {type: number, minimum: 0}
+                status: {type: string, enum: [SUCCESS]}
+      responses:
+        '200': {description: Booking and ticket confirmed; duplicate matching confirmations are idempotent.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {description: "Wrong payment identity, expired seat lock, or non-pending booking."}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {description: Payment signature verification is not configured.}
+
+  /payments/intent:
+    servers: [{url: http://127.0.0.1:8004/api}]
+    post:
+      tags: [Payments]
+      security: [{BearerAuth: []}]
+      summary: Create an idempotent payment intent
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: {type: string, maxLength: 100}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [booking_id, user_id]
+              properties:
+                booking_id: {type: integer, minimum: 1}
+                user_id: {type: integer, minimum: 1}
+                payment_method: {type: string, maxLength: 30}
+      responses:
+        '201': {description: Pending payment intent created or idempotent payment returned.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {description: Idempotency key conflict.}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {description: Booking Service is unavailable or returned invalid data.}
+  /payments/webhook:
+    servers: [{url: http://127.0.0.1:8004/api}]
+    post:
+      tags: [Payments]
+      security: [{PaymentSignature: []}]
+      summary: Process a signed payment gateway callback
+      description: HMAC-SHA256 is computed over the exact raw JSON body using PAYMENT_WEBHOOK_SECRET.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment_reference, gateway_transaction_id, status]
+              description: paid_at is required when status is SUCCESS.
+              properties:
+                payment_reference: {type: string, maxLength: 50}
+                gateway_transaction_id: {type: string, maxLength: 100}
+                status: {type: string, enum: [SUCCESS, FAILED]}
+                paid_at: {type: string, format: date-time}
+      responses:
+        '200': {description: Callback processed or identical duplicate acknowledged.}
+        '202': {description: Payment succeeded but booking was rejected; an idempotent pending refund was created.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {description: Payment already reached a different final state.}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {description: Webhook verification is not configured.}
+  /payments/refund-webhook:
+    servers: [{url: http://127.0.0.1:8004/api}]
+    post:
+      tags: [Payments]
+      security: [{PaymentSignature: []}]
+      summary: Process a signed refund gateway callback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refund_reference, gateway_refund_id, status]
+              properties:
+                refund_reference: {type: string, maxLength: 50}
+                gateway_refund_id: {type: string, maxLength: 100}
+                status: {type: string, enum: [SUCCESS, FAILED]}
+                refunded_at: {type: string, format: date-time}
+      responses:
+        '200': {description: Refund callback processed or identical duplicate acknowledged.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {description: Refund already reached a different final state.}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /payments/{id}:
+    servers: [{url: http://127.0.0.1:8004/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Payments]
+      security: [{BearerAuth: []}]
+      summary: Get an owned payment and its refunds
+      responses:
+        '200': {description: Payment returned.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /payments/{id}/refund:
+    servers: [{url: http://127.0.0.1:8004/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      tags: [Payments]
+      security: [{BearerAuth: []}]
+      summary: Request an idempotent refund for an owned successful payment
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema: {type: string, maxLength: 100}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount: {type: number, minimum: 0.01}
+                reason: {type: string, maxLength: 255}
+      responses:
+        '200': {description: Existing idempotent refund returned.}
+        '201': {description: Refund request created in PENDING state.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {description: Payment is not refundable or amount exceeds refundable balance.}
+
+  /notifications:
+    servers: [{url: http://127.0.0.1:8005/api}]
+    get:
+      tags: [Notifications]
+      security: [{BearerAuth: []}]
+      summary: List the authenticated user's notifications
+      parameters:
+        - in: query
+          name: per_page
+          schema: {type: integer, minimum: 1, maximum: 100, default: 15}
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200': {description: Paginated notifications.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /notifications/unread:
+    servers: [{url: http://127.0.0.1:8005/api}]
+    get:
+      tags: [Notifications]
+      security: [{BearerAuth: []}]
+      summary: List unread notifications for the authenticated user
+      parameters:
+        - in: query
+          name: per_page
+          schema: {type: integer, minimum: 1, maximum: 100, default: 15}
+      responses:
+        '200': {description: Paginated unread notifications.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /notifications/read-all:
+    servers: [{url: http://127.0.0.1:8005/api}]
+    post:
+      tags: [Notifications]
+      security: [{BearerAuth: []}]
+      summary: Mark all of the authenticated user's notifications as read
+      responses:
+        '200': {description: Number of notifications updated.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /notifications/{id}:
+    servers: [{url: http://127.0.0.1:8005/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Notifications]
+      security: [{BearerAuth: []}]
+      summary: Get an owned notification
+      responses:
+        '200': {description: Notification returned.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /notifications/{id}/read:
+    servers: [{url: http://127.0.0.1:8005/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      tags: [Notifications]
+      security: [{BearerAuth: []}]
+      summary: Mark an owned notification as read
+      responses:
+        '200': {description: Notification read state updated.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /notifications/{id}/delivery-status:
+    servers: [{url: http://127.0.0.1:8005/api}]
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Notifications]
+      security: [{BearerAuth: []}]
+      summary: Get an owned notification's in-app delivery status
+      responses:
+        '200': {description: Stored delivery state returned.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT issued by User Service; HS256 and shared JWT_SECRET are required by protected services.
+    PaymentSignature:
+      type: apiKey
+      in: header
+      name: X-Payment-Signature
+      description: Hex HMAC-SHA256 of the exact raw JSON request body using the shared PAYMENT_WEBHOOK_SECRET.
+  parameters:
+    Id:
+      in: path
+      name: id
+      required: true
+      schema: {type: integer, minimum: 1}
+  responses:
+    ValidationError:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: {type: string}
+              errors: {type: object, additionalProperties: {type: array, items: {type: string}}}
+    Unauthorized:
+      description: Missing or invalid authentication/signature.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: {type: boolean, example: false}
+              message: {type: string}
+    Forbidden:
+      description: Authenticated user does not own the resource.
+    NotFound:
+      description: Resource or issued ticket not found.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: {type: string, example: Not Found}
+  schemas:
+    AuthToken:
+      type: object
+      properties:
+        success: {type: boolean, example: true}
+        access_token: {type: string}
+        token_type: {type: string, example: bearer}
+        expires_in: {type: integer}
+        user: {type: object}
+    MovieCreateInput:
+      type: object
+      required: [title]
+      properties:
+        title: {type: string, maxLength: 255}
+        description: {type: string, nullable: true}
+        language: {type: string, nullable: true, maxLength: 50}
+        genre: {type: string, nullable: true, maxLength: 100}
+        duration_minutes: {type: integer, minimum: 1, nullable: true}
+        release_date: {type: string, format: date, nullable: true}
+        certificate: {type: string, maxLength: 20, nullable: true}
+        poster_url: {type: string, format: uri, maxLength: 255, nullable: true}
+    MovieUpdateInput:
+      type: object
+      properties:
+        title: {type: string, maxLength: 255}
+        description: {type: string, nullable: true}
+        language: {type: string, nullable: true, maxLength: 50}
+        genre: {type: string, nullable: true, maxLength: 100}
+        duration_minutes: {type: integer, minimum: 1, nullable: true}
+        release_date: {type: string, format: date, nullable: true}
+        certificate: {type: string, maxLength: 20, nullable: true}
+        poster_url: {type: string, format: uri, maxLength: 255, nullable: true}
+        is_active: {type: boolean}
+    Movie:
+      type: object
+      properties:
+        id: {type: integer}
+        title: {type: string}
+        description: {type: string, nullable: true}
+        language: {type: string, nullable: true}
+        genre: {type: string, nullable: true}
+        duration_minutes: {type: integer, nullable: true}
+        release_date: {type: string, format: date, nullable: true}
+        certificate: {type: string, nullable: true}
+        poster_url: {type: string, format: uri, nullable: true}
+        is_active: {type: boolean}
+    CityUpdateInput:
+      type: object
+      properties:
+        name: {type: string, maxLength: 100}
+        state: {type: string, nullable: true, maxLength: 100}
+        country: {type: string, nullable: true, maxLength: 100}
+        is_active: {type: boolean}
+    City:
+      type: object
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        state: {type: string, nullable: true}
+        country: {type: string}
+        is_active: {type: boolean}
+        theatres:
+          type: array
+          items: {type: object, additionalProperties: true}
+    Notification:
+      type: object
+      properties:
+        id: {type: integer}
+        event_id: {type: string}
+        event_type: {type: string}
+        topic: {type: string}
+        user_id: {type: integer}
+        title: {type: string}
+        message: {type: string}
+        data: {type: object, additionalProperties: true}
+        occurred_at: {type: string, format: date-time, nullable: true}
+        read_at: {type: string, format: date-time, nullable: true}
+        delivery_status: {type: string, enum: [DELIVERED]}

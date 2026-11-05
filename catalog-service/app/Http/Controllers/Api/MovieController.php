@@ -28,7 +28,7 @@ class MovieController extends Controller
             'duration_minutes' => 'nullable|integer|min:1',
             'release_date' => 'nullable|date',
             'certificate' => 'nullable|string|max:20',
-            'poster_url' => 'nullable|url|max:2048',
+            'poster_url' => 'nullable|url|max:255',
         ]);
 
         $movie = Movie::create($validated);
@@ -62,7 +62,7 @@ class MovieController extends Controller
             'duration_minutes' => 'nullable|integer|min:1',
             'release_date' => 'nullable|date',
             'certificate' => 'nullable|string|max:20',
-            'poster_url' => 'nullable|url|max:2048',
+            'poster_url' => 'nullable|url|max:255',
             'is_active' => 'sometimes|boolean',
         ]);
 

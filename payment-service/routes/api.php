@@ -1,13 +1,10 @@
 <?php
-use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Middleware\AuthenticateUserToken;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('payments')->group(function () {
-
-    Route::post('/intent', [
-        PaymentController::class,
-        'createIntent',
-    ]);
 
     Route::post('/webhook', [
         PaymentController::class,
@@ -19,13 +16,20 @@ Route::prefix('payments')->group(function () {
         'refundWebhook',
     ]);
 
-    Route::get('/{id}', [
-        PaymentController::class,
-        'show',
-    ]);
+    Route::middleware(AuthenticateUserToken::class)->group(function () {
+        Route::post('/intent', [
+            PaymentController::class,
+            'createIntent',
+        ]);
 
-    Route::post('/{id}/refund', [
-        PaymentController::class,
-        'requestRefund',
-    ]);
+        Route::get('/{id}', [
+            PaymentController::class,
+            'show',
+        ]);
+
+        Route::post('/{id}/refund', [
+            PaymentController::class,
+            'requestRefund',
+        ]);
+    });
 });
