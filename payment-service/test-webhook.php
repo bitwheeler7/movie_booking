@@ -6,8 +6,8 @@ $url = "http://127.0.0.1:8004/api/payments/webhook";
 $secret = "local-dev-webhook-secret-change-before-production";
 
 $body = json_encode([
-    "payment_reference" => "PAY-INAYBD6PGRASFP",
-    "gateway_transaction_id" => "LOCAL-TXN-001",
+    "payment_reference" => "PAY-UNLASLRJNBY0X2",
+    "gateway_transaction_id" => "LOCAL-TXN-002",
     "status" => "SUCCESS",
     "paid_at" => date('c'),
 ]);

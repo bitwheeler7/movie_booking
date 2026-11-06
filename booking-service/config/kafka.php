@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 return [
     /*
@@ -52,7 +54,7 @@ return [
     /*
      | Kafka supports 4 compression codecs: none , gzip , lz4 and snappy
      */
-    'compression' => env('KAFKA_COMPRESSION_TYPE', 'snappy'),
+    'compression' => env('KAFKA_COMPRESSION_TYPE', 'gzip'),
 
     /*
      | Choose if debug is enabled or not.

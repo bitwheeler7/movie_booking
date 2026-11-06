@@ -83,6 +83,7 @@ applications or notification consumer.
 | `booking-service/` | Seat inventory, bookings, tickets, event outbox |
 | `payment-service/` | Payment/refund APIs, callbacks, event outbox |
 | `notification-service/` | Kafka consumer, event persistence, notification APIs |
+| `frontend/` | Vanilla HTML/CSS/JavaScript client for the documented service APIs |
 | `gateway/` | Nginx configuration (health endpoint only) |
 | `db/init.sql` | Creates the five service databases |
 | `docs/openapi.yaml` | Combined OpenAPI specification |
@@ -152,15 +153,28 @@ gateway routing configuration:
 | Payment | 8004 | `Push-Location .\payment-service; php artisan serve --port=8004; Pop-Location` |
 | Notification | 8005 | `Push-Location .\notification-service; php artisan serve --port=8005; Pop-Location` |
 
-Run each command in its own PowerShell window. Start the consumer separately:
+Run each API command in its own PowerShell window. The outbox and Kafka
+consumer are also workers and must be kept running; starting Laravel's API
+servers alone does not publish or consume events. Run these in three additional
+PowerShell windows:
 
 ```powershell
+Push-Location .\booking-service; php artisan schedule:work; Pop-Location
+Push-Location .\payment-service; php artisan schedule:work; Pop-Location
 Push-Location .\notification-service
 php artisan kafka:consume-notifications
 ```
 
-For host-side services, configure `KAFKA_BROKERS=localhost:9092`. For an
-application container on the Compose network, use `KAFKA_BROKERS=kafka:29092`.
+The Booking and Payment schedulers publish pending outbox events every minute.
+To publish immediately while testing, run `php artisan outbox:publish` from the
+corresponding service directory. The Notification consumer must remain running
+for those events to appear in `notification_service_db.user_notifications`.
+Check each service's Laravel log if a scheduled publish or consumer fails.
+
+For host-side services, configure `KAFKA_BROKERS=localhost:9092` and
+`KAFKA_COMPRESSION_TYPE=gzip` in Booking and Payment Services. Notification
+Service also uses gzip by default. For an application container on the Compose
+network, use `KAFKA_BROKERS=kafka:29092`.
 The notification poison-message topic is `notifications.dead-letter` by
 default and can be changed with `KAFKA_NOTIFICATION_DLQ_TOPIC`.
 
@@ -169,6 +183,36 @@ Booking Service uses `CATALOG_SERVICE_URL` (default
 `PAYMENT_SERVICE_URL` (default `http://127.0.0.1:8004/api`) to request a refund.
 Payment Service uses `BOOKING_SERVICE_URL` (default
 `http://127.0.0.1:8003/api`) for booking lookup and confirmation.
+
+## Catalog admin page
+
+With the Catalog and Booking APIs running on the configured URLs, open
+`frontend/admin/index.html` from the frontend web root (for example
+`http://127.0.0.1:5500/admin/`). The page creates cities, movies, theatres,
+screens, and batches of seats, then schedules shows and initializes their
+Booking seat inventory. Catalog write endpoints are currently unauthenticated;
+use this page only on a trusted development network.
+
+## Seed demo movies and show inventory
+
+The demo Catalog seeder adds five sample movies, a dedicated screen with eight
+active seats, and five non-overlapping showtimes per day for the next five
+calendar days. It attaches the screen to the first active theatre and is safe
+to rerun. Start Catalog Service before running the Booking inventory seeder so
+it can read the demo shows and seats through `CATALOG_SERVICE_URL`:
+
+```powershell
+Push-Location .\catalog-service
+php artisan db:seed --class="Database\Seeders\DemoMovieShowSeeder"
+Pop-Location
+
+Push-Location .\booking-service
+php artisan db:seed --class="Database\Seeders\DemoShowInventorySeeder"
+Pop-Location
+```
+
+The Booking seeder only adds or refreshes demo seat details; it preserves
+existing seat booking and lock statuses.
 
 ## Booking and payment lifecycle
 

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\NotificationEventDecoder;
 use App\Services\NotificationEventRecorder;
 use Illuminate\Console\Command;
 use Illuminate\Database\QueryException;
@@ -28,25 +29,17 @@ class ConsumeNotifications extends Command
             'payment.failed',
             'payment.refunded',
         ])
-            ->withConsumerGroupId('notification-service-group')
+            ->withConsumerGroupId(config('kafka.consumer_group_id'))
             ->withManualCommit()
             ->withHandler(function (
                 ConsumerMessage $message,
                 MessageConsumer $consumer
             ) {
                 $topic = $message->getTopicName();
+                $body = $message->getBody();
 
                 try {
-                    $event = json_decode(
-                        $message->getBody(),
-                        true,
-                        512,
-                        JSON_THROW_ON_ERROR
-                    );
-
-                    if (! is_array($event)) {
-                        throw new \InvalidArgumentException('Notification event must be a JSON object.');
-                    }
+                    $event = app(NotificationEventDecoder::class)->decode($body);
                 } catch (JsonException|\InvalidArgumentException $e) {
                     $this->sendToDeadLetterTopic($message, $e);
                     $consumer->commit($message);
