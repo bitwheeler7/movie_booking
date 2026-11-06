@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\UserNotification;
+use App\Services\NotificationEventDecoder;
 use App\Services\NotificationEventRecorder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
@@ -18,6 +19,30 @@ class UserNotificationTest extends TestCase
             'database.default' => 'sqlite',
             'database.connections.sqlite.database' => ':memory:',
         ]);
+    }
+
+    public function test_kafka_json_deserialized_array_and_raw_json_are_supported(): void
+    {
+        $event = [
+            'event_id' => 'event-decoded',
+            'event_type' => 'booking.confirmed',
+            'user_id' => 42,
+            'data' => ['booking_id' => 7],
+        ];
+        $decoder = app(NotificationEventDecoder::class);
+
+        $this->assertSame($event, $decoder->decode($event));
+        $this->assertSame(
+            $event,
+            $decoder->decode(json_encode($event, JSON_THROW_ON_ERROR))
+        );
+    }
+
+    public function test_kafka_decoder_rejects_non_object_payloads(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        app(NotificationEventDecoder::class)->decode('[1,2]');
     }
 
     public function test_event_payload_is_persisted_and_duplicate_event_ids_are_not_duplicated(): void

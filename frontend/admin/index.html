@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Manage MovieBook catalog records and show schedules.">
+  <title>Catalog admin </title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <header class="admin-nav">
+    <a class="brand" href="../index.html">Movie Booking admin</a>
+    <a class="admin-back-link" href="../index.html">Back to movies</a>
+  </header>
+
+  <main class="admin-page">
+    
+    <div id="admin-global-status" class="admin-global-status" role="status" aria-live="polite">
+      Connecting to Catalog and Booking services…
+    </div>
+
+    <section class="admin-section" aria-labelledby="setup-title">
+      <div class="admin-section-heading">
+        <div><span class="eyebrow">01 — 05</span><h2 id="setup-title">Build your catalog</h2></div>
+        <p class="muted">Selections refresh after each item is saved.</p>
+      </div>
+
+      <div class="admin-card-grid">
+        <article class="admin-card">
+          <div class="admin-card-title"><span class="admin-step">01</span><div><h3>Add a city</h3><p>Start with the location.</p></div></div>
+          <form id="city-form" data-status="city-status">
+            <label>City name<input name="name" required maxlength="100" autocomplete="address-level2"></label>
+            <label>State<input name="state" maxlength="100" autocomplete="address-level1"></label>
+            <label>Country<input name="country" maxlength="100" value="India" autocomplete="country-name"></label>
+            <button class="button button-primary" type="submit">Add city</button>
+            <p id="city-status" class="admin-form-status" role="status" aria-live="polite"></p>
+          </form>
+        </article>
+
+        <article class="admin-card">
+          <div class="admin-card-title"><span class="admin-step">02</span><div><h3>Add a movie</h3><p>Movie information for the catalog.</p></div></div>
+          <form id="movie-form" data-status="movie-status">
+            <label>Title<input name="title" required maxlength="255"></label>
+            <div class="admin-field-row">
+              <label>Language<input name="language" maxlength="50" placeholder="English"></label>
+              <label>Genre<input name="genre" maxlength="100" placeholder="Drama"></label>
+            </div>
+            <div class="admin-field-row">
+              <label>Duration (minutes)<input name="duration_minutes" type="number" min="1" value="120"></label>
+              <label>Certificate<input name="certificate" maxlength="20" placeholder="U / UA / A"></label>
+            </div>
+            <label>Release date<input name="release_date" type="date"></label>
+            <label>Poster URL<input name="poster_url" type="url" maxlength="255" placeholder="https://example.com/poster.jpg"></label>
+            <label>Description<textarea name="description" rows="3"></textarea></label>
+            <button class="button button-primary" type="submit">Add movie</button>
+            <p id="movie-status" class="admin-form-status" role="status" aria-live="polite"></p>
+          </form>
+        </article>
+
+        <article class="admin-card">
+          <div class="admin-card-title"><span class="admin-step">03</span><div><h3>Add a theatre</h3><p>Place it in an existing city.</p></div></div>
+          <form id="theatre-form" data-status="theatre-status">
+            <label>City<select name="city_id" required data-placeholder="Add a city first"></select></label>
+            <label>Theatre name<input name="name" required maxlength="255"></label>
+            <label>Address<input name="address"></label>
+            <label>Pincode<input name="pincode" maxlength="10" inputmode="numeric"></label>
+            <button class="button button-primary" type="submit">Add theatre</button>
+            <p id="theatre-status" class="admin-form-status" role="status" aria-live="polite"></p>
+          </form>
+        </article>
+
+        <article class="admin-card">
+          <div class="admin-card-title"><span class="admin-step">04</span><div><h3>Add a screen</h3><p>Screens belong to a theatre.</p></div></div>
+          <form id="screen-form" data-status="screen-status">
+            <label>Theatre<select name="theatre_id" required data-placeholder="Add a theatre first"></select></label>
+            <label>Screen name<input name="name" required maxlength="100" placeholder="Screen 1"></label>
+            <button class="button button-primary" type="submit">Add screen</button>
+            <p id="screen-status" class="admin-form-status" role="status" aria-live="polite"></p>
+          </form>
+        </article>
+
+        <article class="admin-card">
+          <div class="admin-card-title"><span class="admin-step">05</span><div><h3>Add seats</h3><p>Generate active seats across one or more rows.</p></div></div>
+          <form id="seat-form" data-status="seat-status">
+            <label>Screen<select name="screen_id" required data-placeholder="Add a screen first"></select></label>
+            <label>Row labels<input name="rows" required value="A,B,C" placeholder="A,B,C"></label>
+            <div class="admin-field-row">
+              <label>Seats per row<input name="seats_per_row" type="number" min="1" max="30" value="8" required></label>
+              <label>Seat type<select name="seat_type"><option value="REGULAR">Regular</option><option value="PREMIUM">Premium</option><option value="RECLINER">Recliner</option></select></label>
+            </div>
+            <label>Base price per seat<input name="base_price" type="number" min="0" step="0.01" value="150" required></label>
+            <p class="admin-hint">Only missing seat numbers are added. Existing seats and bookings are left unchanged.</p>
+            <button class="button button-primary" type="submit">Add seats</button>
+            <p id="seat-status" class="admin-form-status" role="status" aria-live="polite"></p>
+          </form>
+        </article>
+      </div>
+    </section>
+
+    <section class="admin-section schedule-section" aria-labelledby="schedule-title">
+      <div class="admin-section-heading">
+        <div><span class="eyebrow">06 — SCHEDULE</span><h2 id="schedule-title">Schedule a show</h2></div>
+      </div>
+      <div class="schedule-layout">
+        <form id="show-form" class="admin-card schedule-form" data-status="show-status">
+          <label>Movie<select name="movie_id" required data-placeholder="Add a movie first"></select></label>
+          <label>Screen<select name="screen_id" required data-placeholder="Add a screen first"></select></label>
+          <div id="schedule-seat-count" class="admin-hint">Choose a screen with active seats.</div>
+          <div class="admin-field-row">
+            <label>Show date<input name="date" type="date" required></label>
+            <label>Start time<input name="time" type="time" required></label>
+          </div>
+          <div class="admin-field-row">
+            <label>Ticket price (₹)<input name="ticket_price" type="number" min="0" step="0.01" value="150" required></label>
+            <label>Movie duration<input id="show-duration" type="text" value="Select a movie" readonly></label>
+          </div>
+          <p class="admin-hint">Show end time is calculated from the selected movie duration. The same ticket price is applied to every seat in this show.</p>
+          <button class="button button-primary" type="submit">Create show and open seats</button>
+          <div id="show-status" class="admin-form-status" role="status" aria-live="polite"></div>
+          <button id="retry-inventory" class="button button-outline retry-button" type="button" hidden>Retry seat setup</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="admin-section upcoming-section" aria-labelledby="upcoming-title">
+      <div class="admin-section-heading">
+        <div><span class="eyebrow">UP NEXT</span><h2 id="upcoming-title">Upcoming shows</h2></div>
+        <button id="refresh-shows" class="button button-outline" type="button">Refresh list</button>
+      </div>
+      <div id="shows-status" class="admin-form-status" role="status" aria-live="polite"></div>
+      <div id="upcoming-shows" class="upcoming-shows"></div>
+    </section>
+  </main>
+
+  <footer class="admin-footer"><a href="../index.html">MovieBook</a><span>Catalog administration</span></footer>
+  <details id="api-debug" class="debug-panel"><summary>API activity <span id="debug-count">0</span></summary><div id="debug-list" class="debug-list"><p class="muted">Requests made by this page appear here.</p></div></details>
+  <script defer src="../js/config.js"></script>
+  <script defer src="../js/api.js"></script>
+  <script defer src="../js/app.js"></script>
+  <script defer src="admin.js"></script>
+</body>
+</html>
